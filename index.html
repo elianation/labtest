@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מדריך בדיקות מעבדה</title>
+  <!-- Link to the custom stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+  <!-- Include SheetJS for parsing Excel files -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <!-- Header menu with three-dot button -->
+      <div class="header-menu">
+        <button class="menu-button">&#8942;</button>
+        <div class="menu-dropdown">
+          <ul>
+            <li id="usefulPhones">טלפונים שימושיים</li>
+            <li id="about">about</li>
+          </ul>
+        </div>
+      </div>
+      <h1>מדריך בדיקות מעבדה</h1>
+    </header>
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="חיפוש..." dir="rtl" />
+    </div>
+    <main>
+      <div id="results"></div>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <div id="modalPhones" class="modal">
+    <div class="modal-content">
+      <span class="close" data-modal="modalPhones">&times;</span>
+      <div id="modalPhonesContent">
+        <ul>
+          <li>מרכזיה - 6060</li>
+          <li>טילים - 5168/6688</li>
+          <li>מדבקות מטופלים - 7011</li>
+          <li>כימיה - 6588/9</li>
+          <li>המטולוגיה - 6685/93</li>
+          <li>קרישה - 6663/4</li>
+          <li>סרולוגיה - 6770/1</li>
+          <li>בקטריולוגיה - 6728/6774</li>
+          <li>פתולוגיה-ציטולוגיה - 610/6642</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalAbout" class="modal">
+    <div class="modal-content">
+      <span class="close" data-modal="modalAbout">&times;</span>
+      <div id="modalAboutContent">
+        <p>Developed by Elia Yousef</p>
+        <p>With inspiration from Yoav Vardi's work for schneider</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Utility function: Checks if a string contains any Hebrew characters.
+    function containsHebrew(text) {
+      return /[\u0590-\u05FF]/.test(text);
+    }
+
+    // Global array to store Excel data
+    let testData = [];
+
+    // Load and parse the Excel file (ensure the file is in the same folder)
+    fetch('מדריך-בדיקות-המעבדה-1.2020.xlsx')
+      .then(response => response.arrayBuffer())
+      .then(data => {
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        testData = XLSX.utils.sheet_to_json(worksheet);
+        displayResults(testData);
+      })
+      .catch(error => {
+        console.error("Error loading Excel file:", error);
+      });
+
+    // Render the clickable cards for each test entry
+    function displayResults(data) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '';
+      data.forEach((item) => {
+        // Use "שם הבדיקה" as the key for test names
+        const testName = item["שם הבדיקה"] || "Unnamed Test";
+        const collectionValue = item["כלי איסוף"] || "";
+        // Determine the text direction for the collection value
+        const collectionDir = containsHebrew(collectionValue) ? "rtl" : "ltr";
+
+        // Determine cap color based on "כלי איסוף" text (Hebrew color word)
+        let capColor = "black";
+        if (collectionValue.trim() !== "") {
+          const collectionText = collectionValue.toLowerCase();
+          const capColorMap = {
+            "אדום": "#e74c3c",
+            "כחול": "#3498db",
+            "ירוק": "#2ecc71",
+            "סגול": "#9b59b6",
+            "צהוב": "#f1c40f",
+            "כתום": "#e67e22",
+            "ורוד": "#fd79a8",
+            "חום": "#8d6e63",
+            "אפור": "#95a5a6",
+            "שחור": "#34495e",
+            "לבן": "#ffffff",
+            "שקוף": "transparent"
+          };
+          for (const color in capColorMap) {
+            if (collectionText.includes(color)) {
+              capColor = capColorMap[color];
+              break;
+            }
+          }
+        }
+
+        // Create card container
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        // Build the card header
+        const header = document.createElement('div');
+        header.className = 'card-header';
+        header.innerHTML = `
+          <div class="header-left">
+            <span class="vial-container"></span>
+            <div class="header-text">
+              <span class="test-name" dir="auto">${testName}</span>
+              <span class="test-collection" dir="${collectionDir}">${collectionValue}</span>
+            </div>
+          </div>
+          <span class="arrow">&#9660;</span>
+        `;
+
+        // Insert the generated inline SVG test tube with a flat-bottom cap
+        const vialContainer = header.querySelector('.vial-container');
+        vialContainer.innerHTML = `
+          <svg width="40" height="80" viewBox="0 0 40 80" xmlns="http://www.w3.org/2000/svg">
+            <!-- Test tube cap: curved top with a flat bottom -->
+            <path d="M8,30 C12,18,28,18,32,30 L32,34 L8,34 Z" 
+                  fill="var(--cap-color)" stroke="#ccc" stroke-width="1"/>
+            <!-- Test tube body -->
+            <path d="M10,34 L10,66 C10,70,15,74,20,74 C25,74,30,70,30,66 L30,34 Z" 
+                  fill="#fff" stroke="#ccc" stroke-width="1"/>
+            <!-- Blood inside the test tube -->
+            <path d="M12,56 L12,66 C12,68,15,70,20,70 C25,70,28,68,28,66 L28,56 Z" 
+                  fill="#e74c3c"/>
+          </svg>
+        `;
+        // Set the cap color via CSS variable
+        vialContainer.style.setProperty('--cap-color', capColor);
+
+        // Toggle card active state on header click
+        header.addEventListener('click', () => {
+          card.classList.toggle('active');
+        });
+
+        // Create collapsible card body with details (excluding the test name)
+        const body = document.createElement('div');
+        body.className = 'card-body';
+        body.setAttribute('dir', 'auto'); // auto direction for mixed content
+        body.innerHTML = formatTestInfo(item);
+
+        card.appendChild(header);
+        card.appendChild(body);
+        resultsDiv.appendChild(card);
+      });
+    }
+
+    // Helper function: Format test information into paragraphs
+    function formatTestInfo(item) {
+      let info = "";
+      for (const key in item) {
+        // Exclude the test name column from the details
+        if (key !== "שם הבדיקה") {
+          info += `<p><strong>${key}:</strong> ${item[key]}</p>`;
+        }
+      }
+      return info;
+    }
+
+    // Filter tests based on the search input using "שם הבדיקה"
+    document.getElementById('searchInput').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
+      const filtered = testData.filter(item => 
+        item["שם הבדיקה"] && item["שם הבדיקה"].toLowerCase().includes(query)
+      );
+      displayResults(filtered);
+    });
+
+    // Header menu toggle
+    document.querySelector('.menu-button').addEventListener('click', function(e) {
+      e.stopPropagation();
+      document.querySelector('.menu-dropdown').classList.toggle('show');
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!document.querySelector('.header-menu').contains(e.target)) {
+        document.querySelector('.menu-dropdown').classList.remove('show');
+      }
+    });
+
+    // Modal functionality
+    document.getElementById('usefulPhones').addEventListener('click', function() {
+      document.getElementById('modalPhones').style.display = 'block';
+    });
+    document.getElementById('about').addEventListener('click', function() {
+      document.getElementById('modalAbout').style.display = 'block';
+    });
+
+    // Close modals when clicking on close button
+    document.querySelectorAll('.close').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var modalId = this.getAttribute('data-modal');
+        document.getElementById(modalId).style.display = 'none';
+      });
+    });
+
+    // Close modal when clicking outside the modal content
+    window.addEventListener('click', function(e) {
+      if (e.target.classList.contains('modal')) {
+        e.target.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
